@@ -23,6 +23,7 @@ class Moderate:
         self.current_step = 0
         self.serious_threat = 0
         self.not_serious_threat = 0
+        self.hate_speech_types = {"1": "slurs or symbols", "2": "encouraging hateful behavior", "3": "mocking trauma", "4": "harmful stereotypes", "5": "threatening violence", "6": "other"}
 
     async def moderate_content(self, message, hateSpeech=True):
         if self.state == State.AWAITING_MESSAGE:
@@ -32,13 +33,13 @@ class Moderate:
             if self.current_step == 0:
                 if message == "yes":
                     reply += "What kind of hateful conduct is it? "
-                    reply += "Please say one of the following:\n"
-                    slurs = "`slurs or symbols`: use of hateful slurs or symbols"
-                    behavior = "`encouraging hateful behavior`: encouraging other users to partake in hateful behavior"
-                    trauma = "`mocking trauma`: denying or mocking known hate crimes or events of genocide"
-                    stereotypes = "`harmful stereotypes`: perpetuating discrimination against protected characteristics such as race, ethnicity, national origin, religious affiliation, sexual orientation, sex, gender, gender identity, serios disease, disability, or immigration status"
-                    violence = "`threatening violence`: acts of credible threats of violence aimed at other users"
-                    other = "`other`: the conduct does not fit into any of the above categories"
+                    reply += "Please say the number corresponding to the type of hateful conduct (e.g. write `1` if the hateful conduct falls under `slurs or symbols`):\n"
+                    slurs = "`(1) slurs or symbols`: use of hateful slurs or symbols"
+                    behavior = "`(2) encouraging hateful behavior`: encouraging other users to partake in hateful behavior"
+                    trauma = "`(3) mocking trauma`: denying or mocking known hate crimes or events of genocide"
+                    stereotypes = "`(4) harmful stereotypes`: perpetuating discrimination against protected characteristics such as race, ethnicity, national origin, religious affiliation, sexual orientation, sex, gender, gender identity, serios disease, disability, or immigration status"
+                    violence = "`(5) threatening violence`: acts of credible threats of violence aimed at other users"
+                    other = "`(6) other`: the conduct does not fit into any of the above categories"
                     types = [slurs, behavior, trauma, stereotypes, violence, other]
                     reply += "\n".join(f"  • {type}" for type in types)
                     self.state = State.AWAITING_MESSAGE
@@ -51,18 +52,23 @@ class Moderate:
                 
             # step 1: moderator picked the relevant hate speech type
             if self.current_step == 1:
-                reply = "You have classified this message as " + message + ". "
-                if message == "threatening violence":
+                if message not in self.hate_speech_types.keys():
+                    reply = "This response is invalid. Please respond with a number corresponding to the type of hateful conduct."
+                    self.state = State.AWAITING_MESSAGE
+                    return reply
+                hate_speech_type = self.hate_speech_types.get(message)
+                reply = "You have classified this message as `" + hate_speech_type + "`. "
+                if hate_speech_type == "threatening violence":
                     self.serious_threat = 1
-                if message == "encouraging hateful behavior":
+                if hate_speech_type == "encouraging hateful behavior":
                     self.serious_threat = 1
-                if message == "other":
+                if hate_speech_type == "other":
                     self.not_serious_threat = 1
-                if message == "slurs or symbols":
+                if hate_speech_type == "slurs or symbols":
                     self.not_serious_threat = 1
-                if message == "mocking trauma":
+                if hate_speech_type == "mocking trauma":
                     self.not_serious_threat = 1
-                if message == "harmful stereotypes":
+                if hate_speech_type == "harmful stereotypes":
                     self.not_serious_threat = 1
             
                 if self.not_serious_threat:

@@ -62,5 +62,3 @@ def check_hate_speech(message):
     #     return True
 
     return False
-
-print(check_hate_speech("I don't talk to f🌟ggots."))

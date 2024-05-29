@@ -25,6 +25,7 @@ class Report:
         self.message = None
         self.reported_message = {'content': None, 'hate_speech_type': None, 'more_info': None}
         self.current_step = 0
+        self.hate_speech_types = {"1": "slurs or symbols", "2": "encouraging hateful behavior", "3": "mocking trauma", "4": "harmful stereotypes", "5": "threatening violence", "6": "other"}
     
     async def handle_message(self, message):
         '''
@@ -82,13 +83,13 @@ class Report:
                     self.state == State.HATEFUL_CONDUCT_CONFIRMED
                     reply = "Thank you for confirming that this is hateful conduct. "
                     reply += "What kind of hateful conduct is it? "
-                    reply += "Please say one of the following:\n"
-                    slurs = "`slurs or symbols`: use of hateful slurs or symbols"
-                    behavior = "`encouraging hateful behavior`: encouraging other users to partake in hateful behavior"
-                    trauma = "`mocking trauma`: denying or mocking known hate crimes or events of genocide"
-                    stereotypes = "`harmful stereotypes`: perpetuating discrimination against protected characteristics such as race, ethnicity, national origin, religious affiliation, sexual orientation, sex, gender, gender identity, serios disease, disability, or immigration status"
-                    violence = "`threatening violence`: acts of credible threats of violence aimed at other users"
-                    other = "`other`: the conduct does not fit into any of the above categories"
+                    reply += "Please say the number corresponding to the type of hateful conduct (e.g. write `1` if the hateful conduct falls under `slurs or symbols`):\n"
+                    slurs = "`(1) slurs or symbols`: use of hateful slurs or symbols"
+                    behavior = "`(2) encouraging hateful behavior`: encouraging other users to partake in hateful behavior"
+                    trauma = "`(3) mocking trauma`: denying or mocking known hate crimes or events of genocide"
+                    stereotypes = "`(4) harmful stereotypes`: perpetuating discrimination against protected characteristics such as race, ethnicity, national origin, religious affiliation, sexual orientation, sex, gender, gender identity, serios disease, disability, or immigration status"
+                    violence = "`(5) threatening violence`: acts of credible threats of violence aimed at other users"
+                    other = "`(6) other`: the conduct does not fit into any of the above categories"
                     types = [slurs, behavior, trauma, stereotypes, violence, other]
                     reply += "\n".join(f"  • {type}" for type in types)
                     self.state = State.AWAITING_MESSAGE
@@ -104,20 +105,20 @@ class Report:
                     return [reply]
                 
             # step 2: user picked the relevant hate speech type, now decides whether to submit or continue
-            if self.current_step == 2:
-                if message.content in self.HATE_SPEECH_TYPES:
-                    self.reported_message['hate_speech_type'] = message.content
-                    reply = "You have classified this message as `" + message.content + "`."
-                    if message.content == "threatening violence" or message.content == "encouraging hateful behavior":
-                        reply = "Since `" + message.content + "` could pose a real-world danger, we will mute the account of the user who sent this message while we review your report."
+            if self.current_step == 2:    
+                if message.content not in self.hate_speech_types.keys():
+                    reply = "This response is invalid. Please respond with a number corresponding to the type of hateful conduct."
+                    self.state = State.AWAITING_MESSAGE
+                    return [reply]
+                else:
+                    hate_speech_type = self.hate_speech_types.get(message.content)
+                    self.reported_message['hate_speech_type'] = hate_speech_type
+                    reply = "You have classified this message as `" + hate_speech_type + "`."
+                    if hate_speech_type == "threatening violence" or hate_speech_type == "encouraging hateful behavior":
+                        reply = "Since `" + hate_speech_type + "` could pose a real-world danger, we will mute the account of the user who sent this message while we review your report."
                     reply += " Would you like to submit your report now, or would you like to add more information? Please say `submit` if you would like to submit, or `continue` if you would like to add more information."
                     self.state = State.AWAITING_MESSAGE
                     self.current_step = 3
-                    return [reply]
-                else:
-                    reply = "That is not a valid hateful conduct subtype. Please choose one of the following:\n"
-                    reply += "\n".join(f"  • `{type}`" for type in self.HATE_SPEECH_TYPES)
-                    self.state = State.AWAITING_MESSAGE
                     return [reply]
                 
             # step 3: user wants to add more information, now needs to add it
